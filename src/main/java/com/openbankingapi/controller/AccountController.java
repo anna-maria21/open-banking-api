@@ -2,13 +2,12 @@ package com.openbankingapi.controller;
 
 
 import com.openbankingapi.dto.TransactionDto;
+import com.openbankingapi.dto.TransactionRequestDto;
+import com.openbankingapi.dto.TransactionResponseDto;
 import com.openbankingapi.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -27,5 +26,10 @@ public class AccountController {
     @GetMapping("/accounts/{accountId}/transactions")
     public List<TransactionDto> getLastTransactions(@PathVariable String accountId, Pageable pageable) {
         return accountService.getLastTransactions(accountId, pageable);
+    }
+
+    @PostMapping("/payments/initiate")
+    public TransactionResponseDto initiatePayment(@RequestBody TransactionRequestDto transactionRequestDto) {
+        return accountService.initiatePayment(transactionRequestDto);
     }
 }

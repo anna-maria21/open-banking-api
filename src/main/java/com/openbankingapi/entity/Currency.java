@@ -15,6 +15,6 @@ public class Currency {
     @Column(nullable = false)
     private String shortName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String code;
 }

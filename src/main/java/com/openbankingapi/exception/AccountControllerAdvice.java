@@ -16,4 +16,25 @@ public class AccountControllerAdvice {
     handleNoSuchAccountException(HttpServletRequest request, NoSuchAccountException ex) {
         return new ErrorInfo(request.getRequestURI(), ex.getMessage());
     }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(NoSuchAccountForTransactionException.class)
+    @ResponseBody ErrorInfo
+    handleNoSuchAccountForTransactionException(HttpServletRequest request, NoSuchAccountException ex) {
+        return new ErrorInfo(request.getRequestURI(), ex.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(InvalidSumException.class)
+    @ResponseBody ErrorInfo
+    handleInvalidSumException(HttpServletRequest request, NoSuchAccountException ex) {
+        return new ErrorInfo(request.getRequestURI(), ex.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(NoSuchCurrencyException.class)
+    @ResponseBody ErrorInfo
+    handleNoSuchCurrencyException(HttpServletRequest request, NoSuchAccountException ex) {
+        return new ErrorInfo(request.getRequestURI(), ex.getMessage());
+    }
 }
