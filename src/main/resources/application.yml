@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    username: sa
+    password:
+    url: jdbc:h2:mem:openbankingdb
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
