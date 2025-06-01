@@ -4,6 +4,7 @@ public record TransactionRequestDto (
         String ibanFrom,
         String ibanTo,
         Double sum,
-        String currencyCodeFrom
+        String currencyCodeFrom,
+        String currencyCodeTo
 ) {
 }

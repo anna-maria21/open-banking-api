@@ -6,11 +6,9 @@ import com.openbankingapi.dto.TransactionResponseDto;
 import com.openbankingapi.exception.InvalidSumException;
 import com.openbankingapi.exception.NoSuchAccountException;
 import com.openbankingapi.exception.NoSuchAccountForTransactionException;
-import com.openbankingapi.exception.NoSuchCurrencyException;
 import com.openbankingapi.mapper.TransactionConverter;
 import com.openbankingapi.properties.AppConfigVariables;
 import com.openbankingapi.repository.AccountRepository;
-import com.openbankingapi.repository.CurrencyRepository;
 import com.openbankingapi.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,7 +30,6 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
-    private final CurrencyRepository currencyRepository;
     private final TransactionConverter transactionConverter;
     private final RestTemplate restTemplate;
     private final AppConfigVariables appConfigVariables;
@@ -55,10 +53,11 @@ public class AccountService {
     }
 
     public TransactionResponseDto initiatePayment(TransactionRequestDto transactionRequest) {
-        log.info("Initiating payment for account {} ({}) to account {}, sum: {}",
+        log.info("Initiating payment for account {} ({}) to account {} ({}), sum: {}",
                 transactionRequest.ibanFrom(),
                 transactionRequest.currencyCodeFrom(),
                 transactionRequest.ibanTo(),
+                transactionRequest.currencyCodeFrom(),
                 transactionRequest.sum());
         validateTransactionParameters(transactionRequest);
 
@@ -73,11 +72,17 @@ public class AccountService {
         var accountFrom = accountRepository.getAccountByIban(transactionRequest.ibanFrom());
         var accountTo = accountRepository.getAccountByIban(transactionRequest.ibanTo());
 
-        if (accountFrom.isEmpty() && accountTo.isEmpty()) {
+        if (accountFrom.isEmpty() || accountTo.isEmpty()) {
             throw new NoSuchAccountForTransactionException(transactionRequest.ibanFrom(), transactionRequest.ibanTo());
         }
 
-        var currencyFrom = currencyRepository.findByCode(transactionRequest.currencyCodeFrom()).orElseThrow(() -> new NoSuchCurrencyException(transactionRequest.currencyCodeFrom()));
+        if (!Objects.equals(accountFrom.get().getCurrency().getCode(), transactionRequest.currencyCodeFrom())) {
+            throw new NoSuchAccountException(transactionRequest.ibanFrom());
+        }
+
+        if (!Objects.equals(accountTo.get().getCurrency().getCode(), transactionRequest.currencyCodeTo())) {
+            throw new NoSuchAccountException(transactionRequest.ibanTo());
+        }
 
         if (transactionRequest.sum() <= 0) {
             throw new InvalidSumException(transactionRequest.sum());
