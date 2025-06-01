@@ -1,8 +1,10 @@
 package com.openbankingapi.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
@@ -28,7 +30,6 @@ public class Transaction {
 
     @ManyToOne
     @JoinColumn(name = "account_from")
-    @JsonBackReference
     private Account accountFrom;
 
     @ManyToOne
@@ -37,7 +38,6 @@ public class Transaction {
 
     @ManyToOne
     @JoinColumn(name = "account_to")
-    @JsonBackReference
     private Account accountTo;
 
     @ManyToOne

@@ -1,7 +1,6 @@
 package com.openbankingapi.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,11 +47,9 @@ public class Account {
     private Long balance;
 
     @OneToMany(mappedBy = "accountFrom")
-    @JsonManagedReference
     private List<Transaction> transactionsFrom;
 
     @OneToMany(mappedBy = "accountTo")
-    @JsonManagedReference
     private List<Transaction> transactionsTo;
 
     public List<Transaction> getAllTransactions() {
