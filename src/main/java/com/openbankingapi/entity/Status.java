@@ -1,5 +1,5 @@
 package com.openbankingapi.entity;
 
 public enum Status {
-    NEW, PAID, CANCELED
+    NEW, PROCESSING, PAID, CANCELED, ERROR
 }

@@ -29,7 +29,11 @@ public class AccountController {
     }
 
     @PostMapping("/payments/initiate")
-    public TransactionResponseDto initiatePayment(@RequestBody TransactionRequestDto transactionRequestDto) {
-        return accountService.initiatePayment(transactionRequestDto);
+    public TransactionResponseDto initiatePayment(@RequestBody TransactionRequestDto transactionRequestDto) throws InterruptedException {
+        var accountFrom = accountService.checkAccount(transactionRequestDto.ibanFrom(), transactionRequestDto.currencyCodeFrom());
+        var accountTo = accountService.checkAccount(transactionRequestDto.ibanTo(), transactionRequestDto.currencyCodeTo());
+        accountService.checkAccountBalance(accountFrom, transactionRequestDto.sum());
+        Long transactionId = accountService.createTransaction(accountFrom, accountTo, (long) (transactionRequestDto.sum()*100));
+        return accountService.initiatePayment(transactionRequestDto, transactionId);
     }
 }

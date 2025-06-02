@@ -13,10 +13,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     @Query(
             """
-                select a from Account a
-                    join fetch a.currency
-                    join fetch a.client
-                where a.iban = :iban
+                select a from Account a where a.iban = :iban
             """
     )
     Optional<Account> getAccountByIban(@Param("iban") String iban);

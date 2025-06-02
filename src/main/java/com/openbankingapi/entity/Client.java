@@ -18,6 +18,7 @@ import java.util.Set;
 public class Client {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonManagedReference
     private Long id;
 
     @Column(nullable = false)
@@ -31,7 +32,7 @@ public class Client {
     @Column(nullable = false)
     private LocalDate birthDate;
 
-    @JsonManagedReference
+
     @OneToMany(mappedBy = "client")
     private Set<Account> accounts;
 }

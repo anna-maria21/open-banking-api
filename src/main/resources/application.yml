@@ -12,6 +12,7 @@ spring:
       ddl-auto: create
     show-sql: true
     defer-datasource-initialization: true
+    open-in-view: false
 
 external:
   api:

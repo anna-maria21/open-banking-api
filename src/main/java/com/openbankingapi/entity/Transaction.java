@@ -47,7 +47,7 @@ public class Transaction {
     @Column(nullable = false)
     private Long sum;
 
-    @ColumnDefault("current_timestamp")
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime changedAt;
 
     @Enumerated(EnumType.STRING)

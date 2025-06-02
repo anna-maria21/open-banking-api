@@ -20,21 +20,35 @@ public class AccountControllerAdvice {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(NoSuchAccountForTransactionException.class)
     @ResponseBody ErrorInfo
-    handleNoSuchAccountForTransactionException(HttpServletRequest request, NoSuchAccountException ex) {
+    handleNoSuchAccountForTransactionException(HttpServletRequest request, NoSuchAccountForTransactionException ex) {
         return new ErrorInfo(request.getRequestURI(), ex.getMessage());
     }
 
-    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(InvalidSumException.class)
     @ResponseBody ErrorInfo
-    handleInvalidSumException(HttpServletRequest request, NoSuchAccountException ex) {
+    handleInvalidSumException(HttpServletRequest request, InvalidSumException ex) {
         return new ErrorInfo(request.getRequestURI(), ex.getMessage());
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(NoSuchCurrencyException.class)
     @ResponseBody ErrorInfo
-    handleNoSuchCurrencyException(HttpServletRequest request, NoSuchAccountException ex) {
+    handleNoSuchCurrencyException(HttpServletRequest request, NoSuchCurrencyException ex) {
+        return new ErrorInfo(request.getRequestURI(), ex.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(NotEnoughMoneyOnBalanceException.class)
+    @ResponseBody ErrorInfo
+    handleNotEnoughMoneyOnBalanceException(HttpServletRequest request, NotEnoughMoneyOnBalanceException ex) {
+        return new ErrorInfo(request.getRequestURI(), ex.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(PaymentProcessingException.class)
+    @ResponseBody ErrorInfo
+    handlePaymentProcessingException(HttpServletRequest request, PaymentProcessingException ex) {
         return new ErrorInfo(request.getRequestURI(), ex.getMessage());
     }
 }

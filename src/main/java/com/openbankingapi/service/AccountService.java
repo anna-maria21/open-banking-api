@@ -3,9 +3,12 @@ package com.openbankingapi.service;
 import com.openbankingapi.dto.TransactionDto;
 import com.openbankingapi.dto.TransactionRequestDto;
 import com.openbankingapi.dto.TransactionResponseDto;
-import com.openbankingapi.exception.InvalidSumException;
+import com.openbankingapi.entity.Account;
+import com.openbankingapi.entity.Status;
+import com.openbankingapi.entity.Transaction;
 import com.openbankingapi.exception.NoSuchAccountException;
-import com.openbankingapi.exception.NoSuchAccountForTransactionException;
+import com.openbankingapi.exception.NoSuchTransactionException;
+import com.openbankingapi.exception.NotEnoughMoneyOnBalanceException;
 import com.openbankingapi.mapper.TransactionConverter;
 import com.openbankingapi.properties.AppConfigVariables;
 import com.openbankingapi.repository.AccountRepository;
@@ -17,8 +20,10 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -26,6 +31,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Transactional
 public class AccountService {
 
     private final AccountRepository accountRepository;
@@ -34,6 +40,8 @@ public class AccountService {
     private final RestTemplate restTemplate;
     private final AppConfigVariables appConfigVariables;
 
+
+    @Transactional(readOnly = true)
     public Double getAccountBalance(String accountId) {
         log.info("Getting account balance for account {}", accountId);
 
@@ -42,6 +50,7 @@ public class AccountService {
         return account.getBalance() / 100.0;
     }
 
+    @Transactional(readOnly = true)
     public List<TransactionDto> getLastTransactions(String accountId, Pageable pageable) {
         log.info("Getting last transactions for account {}", accountId);
         var account = accountRepository.getAccountByIban(accountId)
@@ -52,40 +61,60 @@ public class AccountService {
                 .collect(Collectors.toList());
     }
 
-    public TransactionResponseDto initiatePayment(TransactionRequestDto transactionRequest) {
+    public TransactionResponseDto initiatePayment(TransactionRequestDto transactionRequest,
+                                                  Long transactionId) throws InterruptedException {
         log.info("Initiating payment for account {} ({}) to account {} ({}), sum: {}",
                 transactionRequest.ibanFrom(),
                 transactionRequest.currencyCodeFrom(),
                 transactionRequest.ibanTo(),
-                transactionRequest.currencyCodeFrom(),
+                transactionRequest.currencyCodeTo(),
                 transactionRequest.sum());
-        validateTransactionParameters(transactionRequest);
+
+        var transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new NoSuchTransactionException(transactionId));
+//        Thread.sleep(30000);
+
 
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
         var transactionRequestHttpEntity = new HttpEntity<>(transactionRequest, headers);
-        return restTemplate.postForObject(appConfigVariables.getUrl(), transactionRequestHttpEntity, TransactionResponseDto.class);
+        var externalPaymentApiResponse = restTemplate.postForObject(appConfigVariables.getUrl(), transactionRequestHttpEntity, TransactionResponseDto.class);
+
+        if (externalPaymentApiResponse != null && "SUCCESS".equalsIgnoreCase(externalPaymentApiResponse.status())) {
+            transaction.setStatus(Status.PAID);
+        } else {
+            transaction.setStatus(Status.ERROR);
+        }
+        return externalPaymentApiResponse;
+//        return null;
     }
 
-    private void validateTransactionParameters(TransactionRequestDto transactionRequest) {
-        var accountFrom = accountRepository.getAccountByIban(transactionRequest.ibanFrom());
-        var accountTo = accountRepository.getAccountByIban(transactionRequest.ibanTo());
+    public Long createTransaction(Account accountFrom, Account accountTo, Long sum) {
+        var currentTransaction = Transaction.builder()
+                .accountFrom(accountFrom)
+                .accountTo(accountTo)
+                .currencyFrom(accountFrom.getCurrency())
+                .currencyTo(accountTo.getCurrency())
+                .status(Status.NEW)
+                .changedAt(LocalDateTime.now())
+                .sum(sum)
+                .build();
 
-        if (accountFrom.isEmpty() || accountTo.isEmpty()) {
-            throw new NoSuchAccountForTransactionException(transactionRequest.ibanFrom(), transactionRequest.ibanTo());
-        }
+        return transactionRepository.save(currentTransaction).getId();
+    }
 
-        if (!Objects.equals(accountFrom.get().getCurrency().getCode(), transactionRequest.currencyCodeFrom())) {
-            throw new NoSuchAccountException(transactionRequest.ibanFrom());
+    public void checkAccountBalance(Account account, Double sum) {
+        if (account.getBalance() < sum * 100) {
+            throw new NotEnoughMoneyOnBalanceException(account.getIban());
         }
+    }
 
-        if (!Objects.equals(accountTo.get().getCurrency().getCode(), transactionRequest.currencyCodeTo())) {
-            throw new NoSuchAccountException(transactionRequest.ibanTo());
+    public Account checkAccount(String iban, String currencyCode) {
+        var account = accountRepository.getAccountByIban(iban)
+                .orElseThrow(() -> new NoSuchAccountException(iban));
+        if (!Objects.equals(account.getCurrency().getCode(), currencyCode)) {
+            throw new NoSuchAccountException(iban);
         }
-
-        if (transactionRequest.sum() <= 0) {
-            throw new InvalidSumException(transactionRequest.sum());
-        }
+        return account;
     }
 }
