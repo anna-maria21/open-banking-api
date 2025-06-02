@@ -32,7 +32,7 @@ public class ExternalMockedController {
     @GetMapping("/account/transactions/{iban}")
     public List<Object> getAccountTransactions(@PathVariable String iban, Pageable pageable) {
 
-        UriComponentsBuilder builder = UriComponentsBuilder
+        var builder = UriComponentsBuilder
                 .fromUriString("http://localhost:8080/api/accounts/" + iban + "/transactions")
                 .queryParam("page", pageable.getPageNumber())
                 .queryParam("size", pageable.getPageSize());
