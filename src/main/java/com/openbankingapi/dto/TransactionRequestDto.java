@@ -1,6 +1,9 @@
 package com.openbankingapi.dto;
 
-public record TransactionRequestDto (
+import lombok.Builder;
+
+@Builder
+public record TransactionRequestDto(
         String ibanFrom,
         String ibanTo,
         Double sum,

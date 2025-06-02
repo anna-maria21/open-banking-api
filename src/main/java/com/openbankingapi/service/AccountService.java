@@ -10,18 +10,13 @@ import com.openbankingapi.exception.NoSuchAccountException;
 import com.openbankingapi.exception.NoSuchTransactionException;
 import com.openbankingapi.exception.NotEnoughMoneyOnBalanceException;
 import com.openbankingapi.mapper.TransactionConverter;
-import com.openbankingapi.properties.AppConfigVariables;
 import com.openbankingapi.repository.AccountRepository;
 import com.openbankingapi.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,8 +32,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionConverter transactionConverter;
-    private final RestTemplate restTemplate;
-    private final AppConfigVariables appConfigVariables;
+    private final PaymentGatewayClient paymentGatewayClient;
 
 
     @Transactional(readOnly = true)
@@ -62,31 +56,22 @@ public class AccountService {
     }
 
     public TransactionResponseDto initiatePayment(TransactionRequestDto transactionRequest,
-                                                  Long transactionId) throws InterruptedException {
+                                                  Long transactionId) {
         log.info("Initiating payment for account {} ({}) to account {} ({}), sum: {}",
                 transactionRequest.ibanFrom(),
                 transactionRequest.currencyCodeFrom(),
                 transactionRequest.ibanTo(),
                 transactionRequest.currencyCodeTo(),
                 transactionRequest.sum());
-
         var transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new NoSuchTransactionException(transactionId));
-//        Thread.sleep(30000);
-
-
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        var transactionRequestHttpEntity = new HttpEntity<>(transactionRequest, headers);
-        var externalPaymentApiResponse = restTemplate.postForObject(appConfigVariables.getUrl(), transactionRequestHttpEntity, TransactionResponseDto.class);
-
+        var externalPaymentApiResponse = paymentGatewayClient.initiate(transactionRequest);
         if (externalPaymentApiResponse != null && "SUCCESS".equalsIgnoreCase(externalPaymentApiResponse.status())) {
             transaction.setStatus(Status.PAID);
         } else {
             transaction.setStatus(Status.ERROR);
         }
         return externalPaymentApiResponse;
-//        return null;
     }
 
     public Long createTransaction(Account accountFrom, Account accountTo, Long sum) {
@@ -99,7 +84,6 @@ public class AccountService {
                 .changedAt(LocalDateTime.now())
                 .sum(sum)
                 .build();
-
         return transactionRepository.save(currentTransaction).getId();
     }
 

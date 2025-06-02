@@ -24,7 +24,7 @@ public class ExternalMockedController {
 
     @GetMapping("/account/balance/{iban}")
     public Object getAccountBalance(@PathVariable String iban) {
-        String url = "http://localhost:8080/api//accounts/" + iban + "/balance";
+        String url = "http://localhost:8080/api/accounts/" + iban + "/balance";
 
         return restTemplate.getForObject(url, Object.class);
     }

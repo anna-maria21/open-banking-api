@@ -2,17 +2,21 @@ spring:
   datasource:
     username: sa
     password:
-    url: jdbc:h2:mem:openbankingdb
+    url: jdbc:h2:mem:openbankingtestdb;DB_CLOSE_DELAY=-1
   h2:
     console:
       enabled: true
       path: /h2-console
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: create-drop
     show-sql: true
     defer-datasource-initialization: true
     open-in-view: false
+  sql:
+    init:
+      mode: never
+
 
 external:
   api:

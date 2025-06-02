@@ -51,4 +51,11 @@ public class AccountControllerAdvice {
     handlePaymentProcessingException(HttpServletRequest request, PaymentProcessingException ex) {
         return new ErrorInfo(request.getRequestURI(), ex.getMessage());
     }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(NoSuchTransactionException.class)
+    @ResponseBody ErrorInfo
+    handleNoSuchTransactionException(HttpServletRequest request, NoSuchTransactionException ex) {
+        return new ErrorInfo(request.getRequestURI(), ex.getMessage());
+    }
 }
