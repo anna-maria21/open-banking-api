@@ -5,6 +5,7 @@ import com.openbankingapi.dto.TransactionRequestDto;
 import com.openbankingapi.dto.TransactionResponseDto;
 import com.openbankingapi.entity.Status;
 import com.openbankingapi.entity.Transaction;
+import com.openbankingapi.exception.ErrorInfo;
 import com.openbankingapi.repository.TransactionRepository;
 import com.openbankingapi.service.PaymentGatewayClient;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
@@ -26,7 +26,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -55,7 +56,10 @@ public class AccountControllerTest {
         assertNotNull(balance);
         assertEquals(EXISTING_IBAN_BALANCE, balance);
 
-        assertThrows(RestClientException.class, () -> restTemplate.getForEntity("/api/accounts/" + NOT_EXISTING_IBAN + "/balance", Double.class));
+        var errorResponse = restTemplate.getForEntity("/api/accounts/" + NOT_EXISTING_IBAN + "/balance", ErrorInfo.class);
+        assertEquals(HttpStatus.NOT_FOUND, errorResponse.getStatusCode());
+        assertNotNull(errorResponse.getBody());
+        assertEquals("Account with IBAN " + NOT_EXISTING_IBAN + " does not exist", errorResponse.getBody().message());
     }
 
     @Test
@@ -97,51 +101,56 @@ public class AccountControllerTest {
 
     @Test
     void getTransactionsOfNotExistingAccount() {
-        assertThrows(RestClientException.class, () -> {
-            restTemplate.exchange(
-                    getPageableUrl("http://localhost:8080/api/accounts/" + NOT_EXISTING_IBAN + "/transactions", 0, 2),
-                    HttpMethod.GET,
-                    null,
-                    new ParameterizedTypeReference<List<TransactionDto>>() {}
-            );
-        });
+        var response = restTemplate.exchange(
+                getPageableUrl("/api/accounts/" + NOT_EXISTING_IBAN + "/transactions", 0, 2),
+                HttpMethod.GET,
+                null,
+                ErrorInfo.class
+        );
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Account with IBAN " + NOT_EXISTING_IBAN + " does not exist", response.getBody().message());
     }
 
     @Test
     void initiatePaymentWithWrongIban() {
         var transactionRequest = getTransactionRequest(NOT_EXISTING_IBAN, ANOTHER_EXISTING_IBAN, "UAH", 10.0);
         var response = restTemplate.postForEntity(
-                "/api/payments/initiate", transactionRequest, TransactionResponseDto.class
+                "/api/payments/initiate", transactionRequest, ErrorInfo.class
         );
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Account with IBAN " + NOT_EXISTING_IBAN + " does not exist", response.getBody().message());
+
         var anotherTransactionRequest = getTransactionRequest(EXISTING_IBAN, NOT_EXISTING_IBAN, "UAH", 10.0);
         response = restTemplate.postForEntity(
-                "/api/payments/initiate", anotherTransactionRequest, TransactionResponseDto.class
+                "/api/payments/initiate", anotherTransactionRequest, ErrorInfo.class
         );
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Account with IBAN " + NOT_EXISTING_IBAN + " does not exist", response.getBody().message());
     }
 
     @Test
     void initiatePaymentWithWrongCurrency() {
         var transactionRequest = getTransactionRequest(EXISTING_IBAN, ANOTHER_EXISTING_IBAN, "EUR", 10.0);
         var response = restTemplate.postForEntity(
-                "/api/payments/initiate", transactionRequest, TransactionResponseDto.class
+                "/api/payments/initiate", transactionRequest, ErrorInfo.class
         );
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        var anotherTransactionRequest = getTransactionRequest(EXISTING_IBAN, ANOTHER_EXISTING_IBAN, "EUR", 10.0);
-        response = restTemplate.postForEntity(
-                "/api/payments/initiate", anotherTransactionRequest, TransactionResponseDto.class
-        );
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Account with IBAN " + EXISTING_IBAN + " does not exist", response.getBody().message());
     }
 
     @Test
     void initiatePaymentWithWrongSum() {
         var transactionRequest = getTransactionRequest(EXISTING_IBAN, ANOTHER_EXISTING_IBAN, "UAH", 100000.0);
         var response = restTemplate.postForEntity(
-                "/api/payments/initiate", transactionRequest, TransactionResponseDto.class
+                "/api/payments/initiate", transactionRequest, ErrorInfo.class
         );
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Not enough money on balance for account: " + EXISTING_IBAN, response.getBody().message());
     }
 
     @Test
